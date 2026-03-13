@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Masatoshi Nishiguchi, piyopiyo.ex members
+#
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule LGFXPort do
   @moduledoc """
   `lgfx_port` を Elixir から使うための窓口です。
