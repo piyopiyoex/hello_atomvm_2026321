@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 piyopiyo.ex members
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # AtomVM Elixir ESP32-S3 ハンズオン
 
 本ハンズオンでは、事前構築済みの AtomVM イメージを ESP32-S3 に書き込みます。

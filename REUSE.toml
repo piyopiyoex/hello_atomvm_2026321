@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: NONE
+#
+# SPDX-License-Identifier: CC0-1.0
+
 version = 1
 
 [[annotations]]
@@ -33,7 +37,7 @@ path = [
   "lovyangfx/priv/assets/icons/*.rgb565",
 ]
 precedence = "aggregate"
-SPDX-FileCopyrightText = "2026 Masatoshi Nishiguchi, piyopiyo.ex members"
+SPDX-FileCopyrightText = "2026 piyopiyo.ex members"
 SPDX-License-Identifier = "Apache-2.0"
 
 [[annotations]]
@@ -42,5 +46,5 @@ path = [
   "lovyangfx/atomvm-esp32s3-elixir.img",
 ]
 precedence = "aggregate"
-SPDX-FileCopyrightText = "2026 Masatoshi Nishiguchi, piyopiyo.ex members"
+SPDX-FileCopyrightText = "2026 piyopiyo.ex members"
 SPDX-License-Identifier = "Apache-2.0"

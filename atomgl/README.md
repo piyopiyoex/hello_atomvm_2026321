@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 piyopiyo.ex members
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # atomgl
 
 [AtomGL](https://github.com/atomvm/atomgl) を使った表示サンプルです。

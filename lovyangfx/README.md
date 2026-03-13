@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 piyopiyo.ex members
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # lovyangfx
 
 [LovyanGFX](https://github.com/lovyan03/LovyanGFX) を組み込んだ表示サンプルです。

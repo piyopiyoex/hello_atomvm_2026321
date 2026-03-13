@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 piyopiyo.ex members
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # blinky
 
 最小構成の LED 点滅サンプルです。

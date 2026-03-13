@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 piyopiyo.ex members
+#
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule SampleApp do
   @moduledoc false
 
