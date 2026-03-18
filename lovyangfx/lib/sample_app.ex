@@ -5,7 +5,6 @@
 defmodule SampleApp do
   @moduledoc false
 
-  alias LGFXPort, as: Port
   alias SampleApp.MovingIcons
 
   @sample_open_options [
@@ -27,18 +26,18 @@ defmodule SampleApp do
   @bg 0x000000
 
   def start do
-    port = Port.open(@sample_open_options)
+    port = LGFXPort.open(@sample_open_options)
 
-    log_info("Port opened open_options=#{inspect(@sample_open_options)}")
+    log_info("LGFXPort opened open_options=#{inspect(@sample_open_options)}")
 
     try do
-      with :ok <- step("ping", Port.ping(port)),
-           :ok <- step("init", Port.init(port)),
-           :ok <- step("display(init)", Port.display(port)),
-           :ok <- step("set_rotation", Port.set_rotation(port, @rotation)),
-           :ok <- step("display(rotation)", Port.display(port)),
+      with :ok <- step("ping", LGFXPort.ping(port)),
+           :ok <- step("init", LGFXPort.init(port)),
+           :ok <- step("display(init)", LGFXPort.display(port)),
+           :ok <- step("set_rotation", LGFXPort.set_rotation(port, @rotation)),
+           :ok <- step("display(rotation)", LGFXPort.display(port)),
            {:ok, w, h} <- get_wh(port),
-           :ok <- step("fill_screen", Port.fill_screen(port, @bg)),
+           :ok <- step("fill_screen", LGFXPort.fill_screen(port, @bg)),
            :ok <- MovingIcons.run(port, w, h) do
         :ok
       else
@@ -52,21 +51,21 @@ defmodule SampleApp do
   end
 
   defp get_wh(port) do
-    with {:ok, w} <- Port.width(port, 0),
-         {:ok, h} <- Port.height(port, 0) do
+    with {:ok, w} <- LGFXPort.width(port, 0),
+         {:ok, h} <- LGFXPort.height(port, 0) do
       log_info("viewport=#{w}x#{h}")
       {:ok, w, h}
     end
   end
 
   defp safe_close_port(port) do
-    case Port.close(port) do
+    case LGFXPort.close(port) do
       :ok ->
-        log_info("Port closed")
+        log_info("LGFXPort closed")
         :ok
 
       {:error, reason} ->
-        log_failure("Port close failed", reason)
+        log_failure("LGFXPort close failed", reason)
         :ok
     end
   end
@@ -86,6 +85,6 @@ defmodule SampleApp do
   end
 
   defp log_failure(prefix, reason) when is_binary(prefix) do
-    IO.puts("#{prefix}: #{Port.format_error(reason)}")
+    IO.puts("#{prefix}: #{LGFXPort.format_error(reason)}")
   end
 end
