@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # AtomVM Elixir ESP32-S3 ハンズオン
 
-本ハンズオンでは、事前構築済みの AtomVM イメージを ESP32-S3 に書き込みます。
+本ハンズオンでは、事前構築済みの [AtomVM] イメージを ESP32-S3 に書き込みます。
 そのうえで、Elixir アプリケーションを `.avm` として作成し、実機に書き込んで動作を確認します。
 
 一度 AtomVM 側の準備ができれば、その後はアプリケーションを書き換えながら `.avm` を繰り返し書き込んで試せます。
@@ -189,6 +189,8 @@ AtomVM を ESP32-S3 で使うときは、フラッシュ全体をおおむね次
 - Elixir と Erlang/OTP の組み合わせが合っていない
 - サンプルに対応しない AtomVM イメージを書き込んでいる
 
+[AtomVM]: https://atomvm.org/
+[atomvm]: https://atomvm.org/
 [piyopiyo-pcb]: https://github.com/piyopiyoex/piyopiyo-pcb
 [xiao_esp32s3]: https://wiki.seeedstudio.com/xiao_esp32s3_getting_started/
 [atomvm getting-started]: https://doc.atomvm.org/latest/getting-started-guide.html
