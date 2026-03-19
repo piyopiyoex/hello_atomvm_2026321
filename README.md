@@ -11,6 +11,8 @@ SPDX-License-Identifier: Apache-2.0
 
 一度 AtomVM 側の準備ができれば、その後はアプリケーションを書き換えながら `.avm` を繰り返し書き込んで試せます。
 
+ハンズオンに関する質問や作例の共有は、[Discussions][discussions] をご利用ください。
+
 ## 対象機材
 
 - [Seeed Studio XIAO ESP32S3][xiao_esp32s3] を搭載した [piyopiyo-pcb]
@@ -196,3 +198,4 @@ AtomVM を ESP32-S3 で使うときは、フラッシュ全体をおおむね次
 [シリアルコンソール]: https://wiki.archlinux.jp/index.php/%E3%82%B7%E3%83%AA%E3%82%A2%E3%83%AB%E3%82%B3%E3%83%B3%E3%82%BD%E3%83%BC%E3%83%AB
 [tio]: https://github.com/tio/tio
 [esptool installation]: https://docs.espressif.com/projects/esptool/en/latest/esp32/installation.html
+[discussions]: https://github.com/piyopiyoex/hello_atomvm_2026321/discussions
