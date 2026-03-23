@@ -29,7 +29,8 @@ defmodule SampleApp.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:exatomvm, github: "atomvm/ExAtomVM"}
+      {:exatomvm, github: "atomvm/ExAtomVM"},
+      {:atomlgfx, github: "mnishiguchi/atomlgfx"}
     ]
   end
 end

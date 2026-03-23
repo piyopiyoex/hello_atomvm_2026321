@@ -8,19 +8,11 @@ SPDX-License-Identifier: Apache-2.0
 
 [LovyanGFX](https://github.com/lovyan03/LovyanGFX) を組み込んだ表示サンプルです。
 
-このサンプルでは、専用の AtomVM イメージを書き込んだうえで、RGB565 画像を使ったアニメーションを表示します。
-カスタムの AtomVM イメージを書き込み、その上でアプリケーションを書き換えながら動かす流れを確認できます。
+このサンプルでは、LovyanGFX が使える専用の AtomVM イメージを書き込んだうえで、アニメーションを表示します。
 
 <p align="center">
-  <img alt="lovyangfx" width="320" src="https://github.com/user-attachments/assets/54818ce9-65bc-4567-a1be-24a20a242a0d">
+  <img alt="lovyangfx" width="320" src="https://github.com/user-attachments/assets/47e24bd0-ea04-4f8e-bde6-708dc2fe6b35">
 </p>
-
-## この例で試すこと
-
-- 専用の AtomVM イメージを書き込む
-- RGB565 画像を表示する
-- 画像の移動、回転、拡大縮小を実機で確認する
-- 表示内容や素材を差し替えて反映させる
 
 ## 使い方
 
