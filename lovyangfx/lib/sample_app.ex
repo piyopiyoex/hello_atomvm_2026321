@@ -26,18 +26,18 @@ defmodule SampleApp do
   @bg 0x000000
 
   def start do
-    port = LGFXPort.open(@sample_open_options)
+    {:ok, port} = AtomLGFX.open(@sample_open_options)
 
-    log_info("LGFXPort opened open_options=#{inspect(@sample_open_options)}")
+    log_info("AtomLGFX opened with open_options=#{inspect(@sample_open_options)}")
 
     try do
-      with :ok <- step("ping", LGFXPort.ping(port)),
-           :ok <- step("init", LGFXPort.init(port)),
-           :ok <- step("display(init)", LGFXPort.display(port)),
-           :ok <- step("set_rotation", LGFXPort.set_rotation(port, @rotation)),
-           :ok <- step("display(rotation)", LGFXPort.display(port)),
+      with :ok <- step("ping", AtomLGFX.ping(port)),
+           :ok <- step("init", AtomLGFX.init(port)),
+           :ok <- step("display(init)", AtomLGFX.display(port)),
+           :ok <- step("set_rotation", AtomLGFX.set_rotation(port, @rotation)),
+           :ok <- step("display(rotation)", AtomLGFX.display(port)),
            {:ok, w, h} <- get_wh(port),
-           :ok <- step("fill_screen", LGFXPort.fill_screen(port, @bg)),
+           :ok <- step("fill_screen", AtomLGFX.fill_screen(port, @bg)),
            :ok <- MovingIcons.run(port, w, h) do
         :ok
       else
@@ -46,26 +46,26 @@ defmodule SampleApp do
           err
       end
     after
-      safe_close_port(port)
+      safe_close_device(port)
     end
   end
 
   defp get_wh(port) do
-    with {:ok, w} <- LGFXPort.width(port, 0),
-         {:ok, h} <- LGFXPort.height(port, 0) do
+    with {:ok, w} <- AtomLGFX.width(port, 0),
+         {:ok, h} <- AtomLGFX.height(port, 0) do
       log_info("viewport=#{w}x#{h}")
       {:ok, w, h}
     end
   end
 
-  defp safe_close_port(port) do
-    case LGFXPort.close(port) do
+  defp safe_close_device(port) do
+    case AtomLGFX.close(port) do
       :ok ->
-        log_info("LGFXPort closed")
+        log_info("AtomLGFX device closed")
         :ok
 
       {:error, reason} ->
-        log_failure("LGFXPort close failed", reason)
+        log_failure("AtomLGFX device close failed", reason)
         :ok
     end
   end
@@ -80,11 +80,9 @@ defmodule SampleApp do
     err
   end
 
-  defp log_info(message) when is_binary(message) do
-    IO.puts(message)
-  end
+  defp log_info(message) when is_binary(message), do: IO.puts(message)
 
   defp log_failure(prefix, reason) when is_binary(prefix) do
-    IO.puts("#{prefix}: #{LGFXPort.format_error(reason)}")
+    IO.puts("#{prefix}: #{AtomLGFX.format_error(reason)}")
   end
 end
