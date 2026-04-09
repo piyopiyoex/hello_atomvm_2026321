@@ -10,34 +10,35 @@ defmodule SampleApp do
   @default_expression :neutral
   @expression_order [:neutral, :happy, :angry, :sad, :doubt, :sleepy]
 
-  @frame_ms 33
+  @frame_ms 50
   @expression_interval_ms 10_000
 
-  @touch_center_x 240.0
-  @touch_center_y 160.0
-
-  @background 0x000080
+  @touch_center_x 160.0
+  @touch_center_y 120.0
 
   @sample_open_options [
-    panel_driver: :ili9488,
+    board_preset: :m5stack_core2,
+    panel_driver: :ili9342c,
     width: 320,
-    height: 480,
-    offset_rotation: 0,
+    height: 240,
+    offset_rotation: 3,
     readable: false,
-    invert: false,
+    invert: true,
     rgb_order: false,
     dlen_16bit: false,
     lcd_spi_host: :spi2_host,
-    spi_sclk_gpio: 7,
-    spi_mosi_gpio: 9,
-    spi_miso_gpio: 8,
-    lcd_cs_gpio: 43,
-    lcd_dc_gpio: 3,
-    lcd_rst_gpio: 2,
-    touch_cs_gpio: 44,
-    touch_irq_gpio: -1,
-    touch_spi_host: :spi2_host,
-    touch_spi_freq_hz: 1_000_000,
+    spi_sclk_gpio: 18,
+    spi_mosi_gpio: 23,
+    spi_miso_gpio: 38,
+    lcd_cs_gpio: 5,
+    lcd_dc_gpio: 15,
+    lcd_rst_gpio: -1,
+    touch_driver: :ft6336u,
+    touch_i2c_port: 0,
+    touch_i2c_addr: 0x38,
+    touch_sda_gpio: 21,
+    touch_scl_gpio: 22,
+    touch_irq_gpio: 39,
     lcd_spi_mode: 0,
     lcd_bus_shared: true,
     touch_bus_shared: true
@@ -49,14 +50,21 @@ defmodule SampleApp do
 
   def start(open_options) when is_list(open_options) do
     effective_open_options = @sample_open_options ++ open_options
-    {:ok, port} = AtomLGFX.open(effective_open_options)
+    log_info("about to open AtomLGFX open_options=#{inspect(effective_open_options)}")
 
-    log_info("AtomLGFX opened open_options=#{inspect(effective_open_options)}")
+    case AtomLGFX.open(effective_open_options) do
+      {:ok, port} ->
+        log_info("AtomLGFX opened open_options=#{inspect(effective_open_options)}")
 
-    try do
-      run(port)
-    after
-      safe_close_port(port)
+        try do
+          run(port)
+        after
+          safe_close_port(port)
+        end
+
+      {:error, reason} = err ->
+        log_failure("AtomLGFX open failed", reason)
+        err
     end
   end
 
@@ -64,10 +72,9 @@ defmodule SampleApp do
     with :ok <- step("ping", AtomLGFX.ping(port)),
          :ok <- step("init", AtomLGFX.init(port)),
          :ok <- step("set_rotation", AtomLGFX.set_rotation(port, 1)),
-         :ok <- step("set_swap_bytes_lcd", AtomLGFX.set_swap_bytes(port, true, 0)),
-         :ok <- step("fill_screen", AtomLGFX.fill_screen(port, @background)) do
+         :ok <- step("set_swap_bytes_lcd", AtomLGFX.set_swap_bytes(port, true, 0)) do
       face0 =
-        Face.new(display_width: 480, display_height: 320)
+        Face.new(display_width: 320, display_height: 240)
         |> Face.set_expression(@default_expression)
 
       case Face.init(face0, port) do
