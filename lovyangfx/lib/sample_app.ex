@@ -67,7 +67,7 @@ defmodule SampleApp do
          :ok <- step("set_swap_bytes_lcd", AtomLGFX.set_swap_bytes(port, true, 0)),
          :ok <- step("fill_screen", AtomLGFX.fill_screen(port, @background)) do
       face0 =
-        Face.new()
+        Face.new(display_width: 480, display_height: 320)
         |> Face.set_expression(@default_expression)
 
       case Face.init(face0, port) do

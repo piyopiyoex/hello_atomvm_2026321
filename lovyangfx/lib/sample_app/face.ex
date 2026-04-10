@@ -9,6 +9,8 @@ defmodule SampleApp.Face do
 
   @canvas_width 320
   @canvas_height 240
+  @sprite_depth 8
+  @sprite_target 1
 
   @eye_r 8
   @eye_r_x 90
@@ -30,16 +32,15 @@ defmodule SampleApp.Face do
   @mouth_x 163
   @mouth_y 148
 
-  @col_pr 0x0000
-  @col_bg 0xFFE0
-  @col_sweat 0x001F
-  @col_heart 0xF813
+  @palette_bg 0
+  @palette_fg 1
+  @palette_sweat 2
+  @palette_heart 3
 
-  @offset_x div(480 - @canvas_width, 2)
-  @offset_y div(320 - @canvas_height, 2)
-
-  @sprite_target 1
-  @sprite_depth 16
+  @col_bg {:index, @palette_bg}
+  @col_pr {:index, @palette_fg}
+  @col_sweat {:index, @palette_sweat}
+  @col_heart {:index, @palette_heart}
 
   @external_gaze_hold_ms 1_500
 
@@ -58,14 +59,22 @@ defmodule SampleApp.Face do
             saccade_interval: 500,
             external_gaze: false,
             external_gaze_ms: 0,
-            sprite_target: @sprite_target,
             initialized: false,
-            rand_seed: 1
+            rand_seed: 1,
+            display_width: @canvas_width,
+            display_height: @canvas_height,
+            push_x: 0,
+            push_y: 0
 
-  def new do
+  def new(opts \\ []) do
     now_ms = monotonic_ms()
     {seed1, blink_rand} = rand_mod(1, 20)
     {seed2, saccade_rand} = rand_mod(seed1, 20)
+
+    display_width = Keyword.get(opts, :display_width, @canvas_width)
+    display_height = Keyword.get(opts, :display_height, @canvas_height)
+
+    {push_x, push_y} = centered_push_position(display_width, display_height)
 
     %__MODULE__{
       expr: :neutral,
@@ -78,14 +87,31 @@ defmodule SampleApp.Face do
       breath_count: 0,
       eye_open: true,
       last_blink_ms: now_ms,
-      blink_interval: 2_500 + 100 * blink_rand,
+      blink_interval: 5_000 + 200 * blink_rand,
       last_saccade_ms: now_ms,
-      saccade_interval: 500 + 100 * saccade_rand,
+      saccade_interval: 1_200 + 100 * saccade_rand,
       external_gaze: false,
       external_gaze_ms: now_ms,
-      sprite_target: @sprite_target,
       initialized: false,
-      rand_seed: seed2
+      rand_seed: seed2,
+      display_width: display_width,
+      display_height: display_height,
+      push_x: push_x,
+      push_y: push_y
+    }
+  end
+
+  def put_display_size(%__MODULE__{} = face, display_width, display_height)
+      when is_integer(display_width) and display_width > 0 and is_integer(display_height) and
+             display_height > 0 do
+    {push_x, push_y} = centered_push_position(display_width, display_height)
+
+    %{
+      face
+      | display_width: display_width,
+        display_height: display_height,
+        push_x: push_x,
+        push_y: push_y
     }
   end
 
@@ -98,10 +124,14 @@ defmodule SampleApp.Face do
              @canvas_width,
              @canvas_height,
              @sprite_depth,
-             face.sprite_target
+             @sprite_target
            ),
-         :ok <- AtomLGFX.set_swap_bytes(port, true, face.sprite_target),
-         :ok <- AtomLGFX.fill_screen(port, @col_bg, face.sprite_target) do
+         :ok <- AtomLGFX.create_palette(port, @sprite_target),
+         :ok <- AtomLGFX.set_palette_color(port, @sprite_target, @palette_bg, 0x00FFF4B8),
+         :ok <- AtomLGFX.set_palette_color(port, @sprite_target, @palette_fg, 0x00000000),
+         :ok <- AtomLGFX.set_palette_color(port, @sprite_target, @palette_sweat, 0x000040FF),
+         :ok <- AtomLGFX.set_palette_color(port, @sprite_target, @palette_heart, 0x00FF4080),
+         :ok <- AtomLGFX.fill_screen(port, @col_bg, @sprite_target) do
       {:ok, %{face | initialized: true}}
     end
   end
@@ -145,28 +175,41 @@ defmodule SampleApp.Face do
     breath_offset = min(1.0, face.breath)
     by = trunc(breath_offset * 3)
 
-    with :ok <- AtomLGFX.fill_screen(port, @col_bg, face.sprite_target),
+    with :ok <- AtomLGFX.fill_screen(port, @col_bg, @sprite_target),
          :ok <- draw_mouth(port, face, @mouth_x, @mouth_y + by),
          :ok <- draw_eye(port, face, @eye_r_x, @eye_r_y + by, face.eye_open_r, false),
          :ok <- draw_eye(port, face, @eye_l_x, @eye_l_y + by, face.eye_open_l, true),
          :ok <- maybe_draw_eyebrows(port, face, by),
          :ok <- draw_effect(port, face, breath_offset),
-         :ok <- AtomLGFX.push_sprite(port, face.sprite_target, @offset_x, @offset_y) do
+         :ok <- AtomLGFX.push_sprite(port, @sprite_target, face.push_x, face.push_y) do
       :ok
     end
   end
+
+  defp centered_push_position(display_width, display_height) do
+    {
+      center_offset(display_width, @canvas_width),
+      center_offset(display_height, @canvas_height)
+    }
+  end
+
+  defp center_offset(outer_size, inner_size)
+       when is_integer(outer_size) and is_integer(inner_size) and outer_size > inner_size do
+    div(outer_size - inner_size, 2)
+  end
+
+  defp center_offset(_outer_size, _inner_size), do: 0
 
   defp draw_eye(port, face, x, y, open_ratio, is_left) do
     offset_x = trunc(face.gaze_h * 3)
     offset_y = trunc(face.gaze_v * 3)
     eye_x = x + offset_x
     eye_y = y + offset_y
-    target = face.sprite_target
 
     if open_ratio > 0.0 do
-      with :ok <- AtomLGFX.fill_circle(port, eye_x, eye_y, @eye_r, @col_pr, target),
-           :ok <- maybe_apply_angry_sad_mask(port, face, eye_x, eye_y, is_left, target),
-           :ok <- maybe_apply_happy_sleepy_mask(port, face, eye_x, eye_y, target) do
+      with :ok <- AtomLGFX.fill_circle(port, eye_x, eye_y, @eye_r, @col_pr, @sprite_target),
+           :ok <- maybe_apply_angry_sad_mask(port, face, eye_x, eye_y, is_left),
+           :ok <- maybe_apply_happy_sleepy_mask(port, face, eye_x, eye_y) do
         :ok
       end
     else
@@ -177,12 +220,12 @@ defmodule SampleApp.Face do
         @eye_r * 2,
         4,
         @col_pr,
-        target
+        @sprite_target
       )
     end
   end
 
-  defp maybe_apply_angry_sad_mask(port, face, eye_x, eye_y, is_left, target) do
+  defp maybe_apply_angry_sad_mask(port, face, eye_x, eye_y, is_left) do
     if face.expr in [:angry, :sad] do
       x0 = eye_x - @eye_r
       y0 = eye_y - @eye_r
@@ -191,20 +234,20 @@ defmodule SampleApp.Face do
       x2 = if(not is_left != not (face.expr == :sad), do: x0, else: x1)
       y2 = y0 + @eye_r
 
-      AtomLGFX.fill_triangle(port, x0, y0, x1, y1, x2, y2, @col_bg, target)
+      AtomLGFX.fill_triangle(port, x0, y0, x1, y1, x2, y2, @col_bg, @sprite_target)
     else
       :ok
     end
   end
 
-  defp maybe_apply_happy_sleepy_mask(port, face, eye_x, eye_y, target) do
+  defp maybe_apply_happy_sleepy_mask(port, face, eye_x, eye_y) do
     if face.expr in [:happy, :sleepy] do
       rx = eye_x - @eye_r
       ry = eye_y - @eye_r
       rw = @eye_r * 2 + 4
       rh = @eye_r + 2
 
-      with :ok <- maybe_happy_eye_inner_circle(port, face.expr, eye_x, eye_y, target),
+      with :ok <- maybe_happy_eye_inner_circle(port, face.expr, eye_x, eye_y),
            :ok <-
              AtomLGFX.fill_rect(
                port,
@@ -213,7 +256,7 @@ defmodule SampleApp.Face do
                rw,
                rh,
                @col_bg,
-               target
+               @sprite_target
              ) do
         :ok
       end
@@ -222,11 +265,11 @@ defmodule SampleApp.Face do
     end
   end
 
-  defp maybe_happy_eye_inner_circle(_port, expr, _eye_x, _eye_y, _target) when expr != :happy,
+  defp maybe_happy_eye_inner_circle(_port, expr, _eye_x, _eye_y) when expr != :happy,
     do: :ok
 
-  defp maybe_happy_eye_inner_circle(port, :happy, eye_x, eye_y, target) do
-    AtomLGFX.fill_circle(port, eye_x, eye_y, trunc(@eye_r / 1.5), @col_bg, target)
+  defp maybe_happy_eye_inner_circle(port, :happy, eye_x, eye_y) do
+    AtomLGFX.fill_circle(port, eye_x, eye_y, trunc(@eye_r / 1.5), @col_bg, @sprite_target)
   end
 
   defp draw_mouth(port, face, cx, cy) do
@@ -236,7 +279,7 @@ defmodule SampleApp.Face do
     x = cx - div(w, 2)
     y = cy - div(h, 2) + trunc(face.breath * 2)
 
-    AtomLGFX.fill_rect(port, x, y, w, h, @col_pr, face.sprite_target)
+    AtomLGFX.fill_rect(port, x, y, w, h, @col_pr, @sprite_target)
   end
 
   defp maybe_draw_eyebrows(_port, _face, _by) when @brow_h <= 0, do: :ok
@@ -266,9 +309,9 @@ defmodule SampleApp.Face do
         y4 = y + div(@brow_h, 2) + dy
 
         with :ok <-
-               AtomLGFX.fill_triangle(port, x1, y1, x2, y2, x3, y3, @col_pr, face.sprite_target),
+               AtomLGFX.fill_triangle(port, x1, y1, x2, y2, x3, y3, @col_pr, @sprite_target),
              :ok <-
-               AtomLGFX.fill_triangle(port, x2, y2, x3, y3, x4, y4, @col_pr, face.sprite_target) do
+               AtomLGFX.fill_triangle(port, x2, y2, x3, y3, x4, y4, @col_pr, @sprite_target) do
           :ok
         end
       else
@@ -282,7 +325,7 @@ defmodule SampleApp.Face do
           @brow_w,
           @brow_h,
           @col_pr,
-          face.sprite_target
+          @sprite_target
         )
       end
     end
@@ -291,20 +334,20 @@ defmodule SampleApp.Face do
   defp draw_effect(port, face, offset) do
     case face.expr do
       :doubt ->
-        draw_sweat_mark(port, face.sprite_target, 290, 110, 7, -offset)
+        draw_sweat_mark(port, 290, 110, 7, -offset)
 
       :angry ->
-        draw_anger_mark(port, face.sprite_target, 280, 50, 12, offset)
+        draw_anger_mark(port, 280, 50, 12, offset)
 
       :happy ->
-        draw_heart_mark(port, face.sprite_target, 280, 50, 12, offset)
+        draw_heart_mark(port, 280, 50, 12, offset)
 
       :sad ->
-        draw_chill_mark(port, face.sprite_target, 270, 0, 30, offset)
+        draw_chill_mark(port, 270, 0, 30, offset)
 
       :sleepy ->
-        with :ok <- draw_bubble_mark(port, face.sprite_target, 290, 40, 10, offset),
-             :ok <- draw_bubble_mark(port, face.sprite_target, 270, 52, 6, -offset) do
+        with :ok <- draw_bubble_mark(port, 290, 40, 10, offset),
+             :ok <- draw_bubble_mark(port, 270, 52, 6, -offset) do
           :ok
         end
 
@@ -313,7 +356,7 @@ defmodule SampleApp.Face do
     end
   end
 
-  defp draw_sweat_mark(port, target, x, y, r, offset) do
+  defp draw_sweat_mark(port, x, y, r, offset) do
     y1 = y + trunc(5 * offset)
     r1 = r + trunc(r * 0.2 * offset)
 
@@ -322,7 +365,7 @@ defmodule SampleApp.Face do
     else
       a = trunc(:math.sqrt(3.0) * r1 / 2.0)
 
-      with :ok <- AtomLGFX.fill_circle(port, x, y1, r1, @col_sweat, target),
+      with :ok <- AtomLGFX.fill_circle(port, x, y1, r1, @col_sweat, @sprite_target),
            :ok <-
              AtomLGFX.fill_triangle(
                port,
@@ -333,14 +376,14 @@ defmodule SampleApp.Face do
                x + a,
                y1 - div(r1, 2),
                @col_sweat,
-               target
+               @sprite_target
              ) do
         :ok
       end
     end
   end
 
-  defp draw_anger_mark(port, target, x, y, r, offset) do
+  defp draw_anger_mark(port, x, y, r, offset) do
     r1 = r + abs(trunc(r * 0.4 * offset))
 
     with :ok <-
@@ -351,7 +394,7 @@ defmodule SampleApp.Face do
              div(r1 * 2, 3),
              r1 * 2,
              @col_pr,
-             target
+             @sprite_target
            ),
          :ok <-
            AtomLGFX.fill_rect(
@@ -361,7 +404,7 @@ defmodule SampleApp.Face do
              r1 * 2,
              div(r1 * 2, 3),
              @col_pr,
-             target
+             @sprite_target
            ),
          :ok <-
            AtomLGFX.fill_rect(
@@ -371,7 +414,7 @@ defmodule SampleApp.Face do
              max(div(r1 * 2, 3) - 4, 0),
              r1 * 2,
              @col_bg,
-             target
+             @sprite_target
            ),
          :ok <-
            AtomLGFX.fill_rect(
@@ -381,13 +424,13 @@ defmodule SampleApp.Face do
              r1 * 2,
              max(div(r1 * 2, 3) - 4, 0),
              @col_bg,
-             target
+             @sprite_target
            ) do
       :ok
     end
   end
 
-  defp draw_heart_mark(port, target, x, y, r, offset) do
+  defp draw_heart_mark(port, x, y, r, offset) do
     r1 = r + trunc(r * 0.4 * offset)
 
     if r1 < 2 do
@@ -396,8 +439,10 @@ defmodule SampleApp.Face do
       a = :math.sqrt(2.0) * r1 / 4.0
       a_i = trunc(a)
 
-      with :ok <- AtomLGFX.fill_circle(port, x - div(r1, 2), y, div(r1, 2), @col_heart, target),
-           :ok <- AtomLGFX.fill_circle(port, x + div(r1, 2), y, div(r1, 2), @col_heart, target),
+      with :ok <-
+             AtomLGFX.fill_circle(port, x - div(r1, 2), y, div(r1, 2), @col_heart, @sprite_target),
+           :ok <-
+             AtomLGFX.fill_circle(port, x + div(r1, 2), y, div(r1, 2), @col_heart, @sprite_target),
            :ok <-
              AtomLGFX.fill_triangle(
                port,
@@ -408,7 +453,7 @@ defmodule SampleApp.Face do
                x + div(r1, 2) + a_i,
                y + a_i,
                @col_heart,
-               target
+               @sprite_target
              ),
            :ok <-
              AtomLGFX.fill_triangle(
@@ -420,30 +465,30 @@ defmodule SampleApp.Face do
                x + div(r1, 2) + a_i,
                y + a_i,
                @col_heart,
-               target
+               @sprite_target
              ) do
         :ok
       end
     end
   end
 
-  defp draw_chill_mark(port, target, x, y, r, offset) do
+  defp draw_chill_mark(port, x, y, r, offset) do
     h = r + abs(trunc(r * 0.2 * offset))
 
-    with :ok <- AtomLGFX.fill_rect(port, x - div(r, 2), y, 3, div(h, 2), @col_pr, target),
-         :ok <- AtomLGFX.fill_rect(port, x, y, 3, div(h * 3, 4), @col_pr, target),
-         :ok <- AtomLGFX.fill_rect(port, x + div(r, 2), y, 3, h, @col_pr, target) do
+    with :ok <- AtomLGFX.fill_rect(port, x - div(r, 2), y, 3, div(h, 2), @col_pr, @sprite_target),
+         :ok <- AtomLGFX.fill_rect(port, x, y, 3, div(h * 3, 4), @col_pr, @sprite_target),
+         :ok <- AtomLGFX.fill_rect(port, x + div(r, 2), y, 3, h, @col_pr, @sprite_target) do
       :ok
     end
   end
 
-  defp draw_bubble_mark(port, target, x, y, r, offset) do
+  defp draw_bubble_mark(port, x, y, r, offset) do
     r1 = r + trunc(r * 0.2 * offset)
 
     if r1 < 1 do
       :ok
     else
-      with :ok <- AtomLGFX.draw_circle(port, x, y, r1, @col_pr, target),
+      with :ok <- AtomLGFX.draw_circle(port, x, y, r1, @col_pr, @sprite_target),
            :ok <-
              AtomLGFX.draw_circle(
                port,
@@ -451,7 +496,7 @@ defmodule SampleApp.Face do
                y - div(r1, 4),
                div(r1, 4),
                @col_pr,
-               target
+               @sprite_target
              ) do
         :ok
       end
@@ -473,7 +518,7 @@ defmodule SampleApp.Face do
           face
           | eye_open_l: 0.0,
             eye_open_r: 0.0,
-            blink_interval: 300 + 10 * interval_rand,
+            blink_interval: 120 + 10 * interval_rand,
             eye_open: false,
             last_blink_ms: now_ms,
             rand_seed: next_seed
@@ -483,7 +528,7 @@ defmodule SampleApp.Face do
           face
           | eye_open_l: 1.0,
             eye_open_r: 1.0,
-            blink_interval: 2_500 + 100 * interval_rand,
+            blink_interval: 5_000 + 200 * interval_rand,
             eye_open: true,
             last_blink_ms: now_ms,
             rand_seed: next_seed
@@ -518,7 +563,7 @@ defmodule SampleApp.Face do
           face
           | gaze_v: gaze_v_rand / 100.0 - 1.0,
             gaze_h: gaze_h_rand / 100.0 - 1.0,
-            saccade_interval: 500 + 100 * interval_rand,
+            saccade_interval: 1_200 + 100 * interval_rand,
             last_saccade_ms: now_ms,
             rand_seed: seed3
         }
