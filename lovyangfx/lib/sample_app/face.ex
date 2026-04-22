@@ -9,7 +9,7 @@ defmodule SampleApp.Face do
 
   @canvas_width 320
   @canvas_height 240
-  @sprite_depth 8
+  @sprite_depth 4
   @sprite_target 1
 
   @eye_r 8
