@@ -30,7 +30,7 @@ defmodule SampleApp.MixProject do
   defp deps do
     [
       {:exatomvm, github: "atomvm/ExAtomVM"},
-      {:atomlgfx, github: "mnishiguchi/atomlgfx", branch: "main"}
+      {:atomlgfx, github: "mnishiguchi/atomlgfx", branch: "v1"}
     ]
   end
 end
